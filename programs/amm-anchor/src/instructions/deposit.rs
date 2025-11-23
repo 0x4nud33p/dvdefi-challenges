@@ -10,7 +10,6 @@ use crate::constants::{AMMSEED, AMM_LP_MINT};
 use constant_product_curve::ConstantProduct;
 
 #[derive(Accounts)]
-#[instruction(seed: u64)]
 pub struct Deposit<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
@@ -19,12 +18,12 @@ pub struct Deposit<'info> {
     pub mint_y: Account<'info, Mint>,
 
     #[account(
-        seeds = [AMMSEED, mint_x.key().as_ref(), mint_y.key().as_ref(), &seed.to_le_bytes()],
+        seeds = [AMMSEED, mint_x.key().as_ref(), mint_y.key().as_ref(), &state.seed.to_le_bytes()],
         bump = state.bump,
         has_one = mint_x,
         has_one = mint_y,
     )]
-    pub state: Account<'info, AmmState>, // Amm State account to get vaults and mints
+    pub state: Account<'info, AmmState>,
 
     #[account(
         mut,
@@ -44,7 +43,7 @@ pub struct Deposit<'info> {
         associated_token::mint = state.mint_x,
         associated_token::authority = user,
     )]
-    pub user_ata_x: Account<'info, TokenAccount>, // user's associated token account for token X deposit
+    pub user_ata_x: Account<'info, TokenAccount>,
     #[account(
         mut,
         associated_token::mint = state.mint_y,
@@ -56,20 +55,20 @@ pub struct Deposit<'info> {
         seeds = [AMM_LP_MINT, state.key().as_ref()],
         bump = state.lp_bump,
     )]
-    pub mint_lp: Account<'info, Mint>, // LP Token Mint proof for deposit/withdraw
+    pub mint_lp: Account<'info, Mint>,
     #[account(
         mut,
         associated_token::mint = mint_lp,
         associated_token::authority = user,
     )]
-    pub user_ata_lp: Account<'info, TokenAccount>, // user's associated token account for LP tokens
+    pub user_ata_lp: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
 }
 
 impl<'info> Deposit<'info> {
-    pub fn deposit(&mut self, amount: u64, max_x: u64, max_y: u64) -> Result<()> {
+    pub fn handler(&mut self, amount: u64, max_x: u64, max_y: u64) -> Result<()> {
         require!(self.state.is_locked == false, AmmError::AmmLocked);
         require!(amount != 0, AmmError::InvalidAmount);
 

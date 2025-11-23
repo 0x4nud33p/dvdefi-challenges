@@ -9,7 +9,7 @@ pub struct ToggleLock<'info> {
     pub user: Signer<'info>,
     #[account(
         mut,
-        seeds = [AMMSEED, state.seed.to_le_bytes().as_ref()],
+        seeds = [AMMSEED, state.mint_x.as_ref(), state.mint_y.as_ref(), &state.seed.to_le_bytes()],
         bump = state.bump,
     )]
     pub state: Account<'info, AmmState>,

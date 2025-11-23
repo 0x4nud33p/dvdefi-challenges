@@ -54,7 +54,7 @@ pub struct Initialize<'info> {
 
 
 impl<'info> Initialize<'info> {
-    pub fn initialize(&mut self, seed: u64, fee: u16, bumps: &InitializeBumps) -> Result<()> {
+    pub fn handler(&mut self, seed: u64, fee: u16, bumps: &InitializeBumps) -> Result<()> {
         self.state.set_inner(AmmState {
             seed,
             is_locked: false,

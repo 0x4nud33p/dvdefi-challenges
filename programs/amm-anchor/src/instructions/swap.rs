@@ -1,6 +1,6 @@
+use crate::constants::{AMMSEED, AMM_LP_MINT};
 use crate::errors::AmmError;
 use crate::AmmState;
-use crate::constants::{AMMSEED, AMM_LP_MINT};
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
@@ -9,12 +9,11 @@ use anchor_spl::{
 use constant_product_curve::{ConstantProduct, LiquidityPair};
 
 #[derive(Accounts)]
-#[instruction(seed: u64)]
 pub struct Swap<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
     #[account(
-        seeds = [AMMSEED, mint_x.key().as_ref(), mint_y.key().as_ref(), &seed.to_le_bytes()],
+        seeds = [AMMSEED, mint_x.key().as_ref(), mint_y.key().as_ref(), &state.seed.to_le_bytes()],
         has_one = mint_x,
         has_one = mint_y,
         bump = state.bump,
@@ -56,7 +55,7 @@ pub struct Swap<'info> {
 }
 
 impl<'info> Swap<'info> {
-    pub fn swap(&mut self, is_x: bool, amount_in: u64, min_amount_out: u64) -> Result<()> {
+    pub fn handler(&mut self, is_x: bool, amount_in: u64, min_amount_out: u64) -> Result<()> {
         require!(!self.state.is_locked, AmmError::AmmLocked);
         require!(amount_in != 0, AmmError::InvalidAmount);
 
@@ -67,7 +66,8 @@ impl<'info> Swap<'info> {
             self.mint_lp.supply,
             self.state.fee,
             None,
-        ).map_err(AmmError::from)?;
+        )
+        .map_err(AmmError::from)?;
 
         // get the liquidity pair based on swap direction
         let pair = match is_x {
@@ -76,10 +76,14 @@ impl<'info> Swap<'info> {
         };
 
         // Perform the swap calculation
-        let res = curve.swap(pair, amount_in, min_amount_out).map_err( AmmError::from)?;
+        let res = curve
+            .swap(pair, amount_in, min_amount_out)
+            .map_err(AmmError::from)?;
 
-
-        require!(res.deposit != 0 && res.withdraw !=0 , AmmError::InvalidAmount);
+        require!(
+            res.deposit != 0 && res.withdraw != 0,
+            AmmError::InvalidAmount
+        );
 
         self.deposit_tokens(is_x, res.deposit)?;
         self.withdraw_tokens(is_x, res.withdraw)?;
@@ -124,15 +128,27 @@ impl<'info> Swap<'info> {
             ),
         };
 
-        let cpi_program = self.token_program.to_account_info();
+        let seeds = &[
+            AMMSEED,
+            self.state.mint_x.as_ref(),
+            self.state.mint_y.as_ref(),
+            &self.state.seed.to_le_bytes(),
+            &[self.state.bump],
+        ];
+
+        let signer_seeds = &[&seeds[..]];
 
         let cpi_accounts = Transfer {
             from,
             to,
-            authority: self.user.to_account_info(),
+            authority: self.state.to_account_info(),
         };
 
-        let ctx = CpiContext::new(cpi_program, cpi_accounts);
+        let ctx = CpiContext::new_with_signer(
+            self.token_program.to_account_info(),
+            cpi_accounts,
+            signer_seeds,
+        );
 
         transfer(ctx, amount)
     }

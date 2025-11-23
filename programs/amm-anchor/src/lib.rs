@@ -11,14 +11,14 @@ pub use errors::*;
 pub use events::*;
 pub use state::*;
 
-declare_id!("Cp3bxBLgcJjGZSvjKreVvuzhVmSvGRwshSYnH2rxHtij");
+declare_id!("GyM2ZrzaqgWsi8jciP3kTSxY3mYwrjY3xaJ467YMpVd2");
 
 #[program]
 pub mod amm_anchor {
     use super::*;
 
     pub fn initialize(ctx: Context<Initialize>, seed: u64, fee: u16) -> Result<()> {
-        ctx.accounts.initialize(seed, fee, &ctx.bumps)?;
+        ctx.accounts.handler(seed, fee, &ctx.bumps)?;
 
         emit!(InitializeAMMEvent {
             seed,
@@ -33,7 +33,7 @@ pub mod amm_anchor {
     }
 
     pub fn deposit(ctx: Context<Deposit>, amount: u64, max_x: u64, max_y: u64) -> Result<()> {
-        ctx.accounts.deposit(amount, max_x, max_y)?;
+        ctx.accounts.handler(amount, max_x, max_y)?;
 
         emit!(DepositEvent {
             user: ctx.accounts.user.key(),
@@ -47,12 +47,12 @@ pub mod amm_anchor {
     }
 
     pub fn swap(ctx: Context<Swap>, is_x: bool, amount_in: u64, min_amount_out: u64) -> Result<()> {
-        ctx.accounts.swap(is_x, amount_in, min_amount_out)?;
+        ctx.accounts.handler(is_x, amount_in, min_amount_out)?;
 
         Ok(())
     }
 
-    pub fn lock(ctx: Context<Lock>) -> Result<()> {
+    pub fn lock(ctx: Context<ToggleLock>) -> Result<()> {
         ctx.accounts.lock()?;
 
         emit!(LockEvent {
@@ -63,7 +63,7 @@ pub mod amm_anchor {
         Ok(())
     }
 
-    pub fn unlock(ctx: Context<Lock>) -> Result<()> {
+    pub fn unlock(ctx: Context<ToggleLock>) -> Result<()> {
         ctx.accounts.unlock()?;
 
         emit!(LockEvent {
@@ -75,7 +75,7 @@ pub mod amm_anchor {
     }
 
     pub fn withdraw(ctx: Context<Withdraw>, amount: u64, min_x: u64, min_y: u64) -> Result<()> {
-        ctx.accounts.withdraw(amount, min_x, min_y)?;
+        ctx.accounts.handler(amount, min_x, min_y)?;
 
         emit!(WithdrawEvent {
             user: ctx.accounts.user.key(),

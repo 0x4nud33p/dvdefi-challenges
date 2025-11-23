@@ -4,7 +4,7 @@ use constant_product_curve::CurveError;
 #[error_code]
 pub enum AmmError {
     #[msg("The AMM pool is currently locked.")]
-    AmmLocked,
+        AmmLocked,
     #[msg("Invalid amount provided.")]
     InvalidAmount,
     #[msg("Slippage exceeded.")]
